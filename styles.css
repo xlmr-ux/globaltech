@@ -1,46 +1,46 @@
-/* General Styling */
 body {
   margin: 0;
+  padding: 0;
   overflow: hidden;
-  background: linear-gradient(#000, #151515);
-  min-height: 100svh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-family: Arial, sans-serif;
-  color: white;
+  background: #d5e4e1;
+  font-family: 'Arial', sans-serif;
 }
 
-/* Text Styling */
-#content {
+#scene-container {
   position: absolute;
-  z-index: 2;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(180deg, #93c7b5 0%, #76a8c8 50%, #355c7d 100%);
 }
 
-h1 {
-  font-size: 3rem;
-  text-shadow: 0 0 10px white;
-  animation: fade-in 2s ease-in-out;
+.credits {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  transition: background 0.3s;
+  opacity: 0;
 }
 
-/* Fade-in animation for the text */
-@keyframes fade-in {
+.credits:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.fade-in {
+  animation: fadeIn 3s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
-}
-
-/* Lightning Canvas Styling */
-canvas {
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
 }
