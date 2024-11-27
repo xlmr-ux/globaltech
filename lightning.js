@@ -1,45 +1,97 @@
-var pixelCanvas = document.getElementById("pixelCanvas");
-var pixelCtx = pixelCanvas.getContext("2d");
-pixelCanvas.width = window.innerWidth;
-pixelCanvas.height = window.innerHeight;
+const canvas = document.getElementById("lightning");
+const ctx = canvas.getContext("2d");
 
-var pixelSize = 10;
-var text = "AFRICA TECHNOLOGIES";
-var startX = 100;
-var startY = window.innerHeight / 2;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-function drawPixelLetter(x, y, char) {
-  var fontMap = {
-    A: ["  111  ", " 1   1 ", "1111111", "1     1", "1     1"],
-    F: ["111111", "1     ", "111111", "1     ", "1     "],
-    // Add remaining letters
-    " ": ["       ", "       ", "       ", "       ", "       "],
-  };
+let lightningBolts = [];
+let lightTimeCurrent = 0;
+let lightTimeTotal = 1000;
 
-  var pattern = fontMap[char.toUpperCase()] || fontMap[" "];
-  pattern.forEach((row, rowIndex) => {
-    row.split("").forEach((cell, colIndex) => {
-      if (cell === "1") {
-        pixelCtx.fillStyle = "#FFD700"; // Golden color
-        pixelCtx.fillRect(
-          x + colIndex * pixelSize,
-          y + rowIndex * pixelSize,
-          pixelSize,
-          pixelSize
-        );
-      }
-    });
-  });
+// Helper function for random values
+function rand(min, max) {
+  return Math.random() * (max - min) + min;
 }
 
-function drawText(text, startX, startY) {
-  let x = startX;
-  let spaceBetweenLetters = pixelSize * 8;
+// Create a lightning bolt object
+function createLightning(x, y, canBranch) {
+  return {
+    x: x,
+    y: y,
+    xRange: rand(5, 30),
+    yRange: rand(10, 20),
+    path: [{ x: x, y: y }],
+    pathLimit: rand(10, 35),
+    canBranch: canBranch,
+  };
+}
 
-  for (let char of text) {
-    drawPixelLetter(x, startY, char);
-    x += spaceBetweenLetters;
+// Update the lightning bolts
+function updateLightning() {
+  for (let i = lightningBolts.length - 1; i >= 0; i--) {
+    const bolt = lightningBolts[i];
+    const last = bolt.path[bolt.path.length - 1];
+
+    bolt.path.push({
+      x: last.x + rand(-bolt.xRange / 2, bolt.xRange / 2),
+      y: last.y + bolt.yRange,
+    });
+
+    if (bolt.path.length > bolt.pathLimit) {
+      lightningBolts.splice(i, 1);
+    }
+
+    // Add branches occasionally
+    if (bolt.canBranch && Math.random() < 0.1) {
+      lightningBolts.push(createLightning(last.x, last.y, false));
+    }
   }
 }
 
-drawText(text, startX, startY);
+// Draw the lightning bolts
+function drawLightning() {
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+  ctx.lineWidth = 2;
+
+  for (const bolt of lightningBolts) {
+    ctx.beginPath();
+    ctx.moveTo(bolt.path[0].x, bolt.path[0].y);
+
+    for (const segment of bolt.path) {
+      ctx.lineTo(segment.x, segment.y);
+    }
+
+    ctx.stroke();
+  }
+}
+
+// Clear the canvas with a slight fade
+function clearCanvas() {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+// Lightning generation timer
+function lightningTimer() {
+  lightTimeCurrent += 16; // Assuming ~60fps
+  if (lightTimeCurrent >= lightTimeTotal) {
+    const x = rand(100, canvas.width - 100);
+    const y = rand(0, canvas.height / 2);
+    lightningBolts.push(createLightning(x, y, true));
+    lightTimeCurrent = 0;
+    lightTimeTotal = rand(500, 1500); // Adjust timing dynamically
+  }
+}
+
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+  clearCanvas();
+  updateLightning();
+  drawLightning();
+}
+
+// Start animation after delay
+setTimeout(() => {
+  animate();
+}, 2000); // 2-second delay to show the company name first
