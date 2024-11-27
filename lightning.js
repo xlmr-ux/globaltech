@@ -1,97 +1,148 @@
-const canvas = document.getElementById("lightning");
-const ctx = canvas.getContext("2d");
+console.clear();
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let lightningBolts = [];
-let lightTimeCurrent = 0;
-let lightTimeTotal = 1000;
-
-// Helper function for random values
-function rand(min, max) {
-  return Math.random() * (max - min) + min;
-}
-
-// Create a lightning bolt object
-function createLightning(x, y, canBranch) {
-  return {
-    x: x,
-    y: y,
-    xRange: rand(5, 30),
-    yRange: rand(10, 20),
-    path: [{ x: x, y: y }],
-    pathLimit: rand(10, 35),
-    canBranch: canBranch,
+// Lightning Animation Constructor
+var canvasLightning = function (c, cw, ch) {
+  this.init = function () {
+    this.loop();
   };
-}
 
-// Update the lightning bolts
-function updateLightning() {
-  for (let i = lightningBolts.length - 1; i >= 0; i--) {
-    const bolt = lightningBolts[i];
-    const last = bolt.path[bolt.path.length - 1];
+  var _this = this;
+  this.c = c;
+  this.ctx = c.getContext("2d");
+  this.cw = cw;
+  this.ch = ch;
 
-    bolt.path.push({
-      x: last.x + rand(-bolt.xRange / 2, bolt.xRange / 2),
-      y: last.y + bolt.yRange,
+  this.now = Date.now();
+  this.delta = 0;
+  this.then = this.now;
+
+  this.lightning = [];
+  this.lightTimeCurrent = 0;
+  this.lightTimeTotal = 50;
+
+  this.rand = function (rMi, rMa) {
+    return ~~(Math.random() * (rMa - rMi + 1) + rMi);
+  };
+
+  this.createL = function (x, y, canSpawn) {
+    this.lightning.push({
+      x: x,
+      y: y,
+      xRange: this.rand(5, 30),
+      yRange: this.rand(5, 25),
+      path: [{ x: x, y: y }],
+      pathLimit: this.rand(10, 35),
+      canSpawn: canSpawn,
+      hasFired: false,
+      grower: 0,
+      growerLimit: 5,
     });
+  };
 
-    if (bolt.path.length > bolt.pathLimit) {
-      lightningBolts.splice(i, 1);
+  this.updateL = function () {
+    var i = this.lightning.length;
+    while (i--) {
+      var light = this.lightning[i];
+      light.grower += this.delta;
+
+      if (light.grower >= light.growerLimit) {
+        light.grower = 0;
+        light.growerLimit *= 1.05;
+
+        light.path.push({
+          x: light.path[light.path.length - 1].x + (this.rand(0, light.xRange) - light.xRange / 2),
+          y: light.path[light.path.length - 1].y + this.rand(0, light.yRange),
+        });
+
+        if (light.path.length > light.pathLimit) {
+          this.lightning.splice(i, 1);
+        }
+        light.hasFired = true;
+      }
     }
+  };
 
-    // Add branches occasionally
-    if (bolt.canBranch && Math.random() < 0.1) {
-      lightningBolts.push(createLightning(last.x, last.y, false));
+  this.renderL = function () {
+    var i = this.lightning.length;
+    while (i--) {
+      var light = this.lightning[i];
+      this.ctx.strokeStyle = "hsla(0, 100%, 100%, " + this.rand(10, 100) / 100 + ")";
+      this.ctx.lineWidth = 1;
+      if (this.rand(0, 30) == 0) this.ctx.lineWidth = 2;
+      if (this.rand(0, 60) == 0) this.ctx.lineWidth = 3;
+      if (this.rand(0, 90) == 0) this.ctx.lineWidth = 4;
+
+      this.ctx.beginPath();
+      var pathCount = light.path.length;
+      this.ctx.moveTo(light.x, light.y);
+
+      for (var pc = 0; pc < pathCount; pc++) {
+        this.ctx.lineTo(light.path[pc].x, light.path[pc].y);
+        if (light.canSpawn && this.rand(0, 100) == 0) {
+          light.canSpawn = false;
+          this.createL(light.path[pc].x, light.path[pc].y, false);
+        }
+      }
+
+      if (!light.hasFired) {
+        this.ctx.fillStyle = "rgba(255, 255, 255, " + this.rand(4, 12) / 100 + ")";
+        this.ctx.fillRect(0, 0, this.cw, this.ch);
+      }
+
+      if (this.rand(0, 60) == 0) {
+        this.ctx.fillStyle = "rgba(255, 255, 255, " + this.rand(1, 3) / 100 + ")";
+        this.ctx.fillRect(0, 0, this.cw, this.ch);
+      }
+
+      this.ctx.stroke();
     }
-  }
-}
+  };
 
-// Draw the lightning bolts
-function drawLightning() {
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-  ctx.lineWidth = 2;
-
-  for (const bolt of lightningBolts) {
-    ctx.beginPath();
-    ctx.moveTo(bolt.path[0].x, bolt.path[0].y);
-
-    for (const segment of bolt.path) {
-      ctx.lineTo(segment.x, segment.y);
+  this.lightningTimer = function () {
+    this.lightTimeCurrent += this.delta;
+    if (this.lightTimeCurrent >= this.lightTimeTotal) {
+      var newX = this.rand(100, cw - 100);
+      var newY = this.rand(0, ch / 2);
+      var createCount = this.rand(1, 3);
+      while (createCount--) {
+        this.createL(newX, newY, true);
+      }
+      this.lightTimeCurrent = 0;
+      this.lightTimeTotal = this.rand(200, 1500);
     }
+  };
 
-    ctx.stroke();
-  }
-}
+  this.clearCanvas = function () {
+    this.ctx.globalCompositeOperation = "destination-out";
+    this.ctx.fillStyle = "rgba(0,0,0," + this.rand(1, 30) / 100 + ")";
+    this.ctx.fillRect(0, 0, this.cw, this.ch);
+    this.ctx.globalCompositeOperation = "source-over";
+  };
 
-// Clear the canvas with a slight fade
-function clearCanvas() {
-  ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
+  window.addEventListener("resize", () => {
+    this.cw = this.c.width = window.innerWidth;
+    this.ch = this.c.height = window.innerHeight;
+  });
 
-// Lightning generation timer
-function lightningTimer() {
-  lightTimeCurrent += 16; // Assuming ~60fps
-  if (lightTimeCurrent >= lightTimeTotal) {
-    const x = rand(100, canvas.width - 100);
-    const y = rand(0, canvas.height / 2);
-    lightningBolts.push(createLightning(x, y, true));
-    lightTimeCurrent = 0;
-    lightTimeTotal = rand(500, 1500); // Adjust timing dynamically
-  }
-}
+  this.loop = function () {
+    requestAnimationFrame(this.loop.bind(this));
 
-// Animation loop
-function animate() {
-  requestAnimationFrame(animate);
-  clearCanvas();
-  updateLightning();
-  drawLightning();
-}
+    this.now = Date.now();
+    this.delta = this.now - this.then;
+    this.then = this.now;
 
-// Start animation after delay
-setTimeout(() => {
-  animate();
-}, 2000); // 2-second delay to show the company name first
+    this.clearCanvas();
+    this.updateL();
+    this.lightningTimer();
+    this.renderL();
+  };
+};
+
+// Initialize the canvas and animation
+const c = document.getElementById("canvas");
+const cw = (c.width = window.innerWidth);
+const ch = (c.height = window.innerHeight);
+const cl = new canvasLightning(c, cw, ch);
+
+// Start the animation after a delay
+setTimeout(() => cl.init(), 2000); // Delay of 2 seconds
